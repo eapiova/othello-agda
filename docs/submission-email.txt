@@ -1,0 +1,33 @@
+To: masaya.taniguchi@riken.jp, sho.sonoda@riken.jp
+Subject: TPP-mark 2026 Problem 1 — constructive Othello strategies in safe Agda
+
+I submit an Agda formalization of TPP-mark 2026 Problem 1, together with a
+proof of the stronger exact raw-score value +8 for White on the 4×4 board.
+White guarantees at least +8 against every Black strategy, and Black holds
+the result to at most +8 against every White strategy. Both guarantees
+construct completed legal plays. Problems 2 and 3 are stated only.
+
+Attached: othello-agda-tpp2026-problem1.tar.gz. The archive contains tagged
+source, the three-page write-up, highlighted Agda source, certificate data,
+the verification ledger, and cold checking records from two machines.
+SUBMISSION.json identifies the release commit and toolchain evidence.
+
+To check the development using Agda 2.9.0, with no external libraries:
+
+  agda --no-libraries --safe --without-K --cubical-compatible -i src src/Everything.agda
+
+The generic checker-soundness proof is in Game.Soundness. The two concrete
+certificate acceptance equalities in Othello.Proof4 use refl; no external
+solver result is assumed. The headline inhabitants are problem1 and value4.
+
+AI use: Codex assisted with proofs, code, tests, documentation and untrusted
+certificates, and a user-supplied Claude plan informed the design. Observed
+Codex metadata identified the continuing coordinator as GPT-6.1 Sol/xhigh;
+the implementation workers were explicitly GPT-6.1 Sol/high. Earlier model
+identities without metadata are not inferred. Full disclosure is included
+in docs/ai-use.md. Correctness rests on safe Agda checking and the stated
+Othello rule model.
+
+eapiova
+
+[Draft only: this email has not been sent.]

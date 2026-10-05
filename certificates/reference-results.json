@@ -1,0 +1,28 @@
+{
+  "machine": "laptop",
+  "python": "Python 3.14.7",
+  "commands": [
+    "python3 -m unittest discover -s tools -p test_*.py -v",
+    "python3 tools/ref.py",
+    "python3 tools/generate.py"
+  ],
+  "tests": 13,
+  "tests_passed": true,
+  "exact_value": 8,
+  "perfect_line_final": {
+    "black": 3,
+    "white": 11,
+    "empty": 2,
+    "passes": 0
+  },
+  "initial8_perft_0_to_5": [
+    1,
+    4,
+    12,
+    56,
+    244,
+    1396
+  ],
+  "rules_cross_checked_certificate_states": 451,
+  "trust": "untrusted executable validation, not an Agda proof"
+}

@@ -36,4 +36,8 @@ def source_identity(root: Path) -> dict:
         origin = manifest["git"]
     else:
         origin = git_info(root)
-    return {"source_sha256": digest_entries(entries), "source_files": len(entries), **origin}
+    proof_entries = {name: digest for name, digest in entries.items()
+                     if name.endswith((".agda", ".agda-lib"))}
+    return {"source_sha256": digest_entries(entries),
+            "agda_source_sha256": digest_entries(proof_entries),
+            "source_files": len(entries), **origin}

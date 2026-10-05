@@ -7,12 +7,12 @@
   "lower_nodes": 399,
   "upper_nodes": 337,
   "independently_compared_positions": 451,
-  "wall_seconds": 0.032740407001256244,
+  "wall_seconds": 0.6903792810007872,
   "solver_cache": {
-    "hits": 0,
-    "misses": 0,
+    "hits": 26957,
+    "misses": 62789,
     "maxsize": null,
-    "currsize": 0
+    "currsize": 62789
   },
   "trust": "untrusted generator; Agda proof required"
 }

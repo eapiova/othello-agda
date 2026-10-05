@@ -15,6 +15,7 @@ import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 from provenance import source_identity
 
@@ -60,10 +61,10 @@ def main() -> int:
         parser.error("target must be an existing project Agda module")
     args.output.mkdir(parents=True, exist_ok=True)
     output = args.output.resolve()
-    with (root / ".agda-check.lock").open("w") as lock:
+    with (Path(tempfile.gettempdir()) / "othello-agda-local-check.lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         source = source_identity(root)
-        agda = Path(shutil.which("agda") or "/home/eapiova/.local/bin/agda").resolve()
+        agda = Path(shutil.which("agda") or Path.home() / ".local/bin/agda").resolve()
         version = subprocess.run([str(agda), "--version"], capture_output=True, text=True, check=True).stdout.strip()
         command = [str(agda), "+RTS", "-M" + args.heap, "-RTS", "--no-libraries",
                    "--safe", "--without-K", "--cubical-compatible", "-i", "src"]
