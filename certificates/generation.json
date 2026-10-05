@@ -1,0 +1,18 @@
+{
+  "format": "othello-strategy-tree-v1",
+  "value": 8,
+  "json_sha256": "cc3ef3dfe89a53576c2cf49e61ff6060ca186f70eafb787b08fa7feddb18af8b",
+  "json_bytes": 21764,
+  "agda_bytes": 8892,
+  "lower_nodes": 399,
+  "upper_nodes": 337,
+  "independently_compared_positions": 451,
+  "wall_seconds": 0.032740407001256244,
+  "solver_cache": {
+    "hits": 0,
+    "misses": 0,
+    "maxsize": null,
+    "currsize": 0
+  },
+  "trust": "untrusted generator; Agda proof required"
+}
