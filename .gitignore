@@ -1,0 +1,8 @@
+_build/
+*.agdai
+deps/
+results/
+dist/
+__pycache__/
+*.pyc
+.codex/
