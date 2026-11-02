@@ -1,0 +1,104 @@
+{
+  "format": "othello-safe-standard-initial6x6-completion-v1",
+  "completed_utc": "2026-10-19T13:08:16.800985+00:00",
+  "canonical_host": "eapiova",
+  "canonical_repository": "/home/eapiova/projects/othello-agda-main",
+  "objective": "Safe Agda-checked standard initial6x6 raw White-minus-Black+4, with the SAME optimal strategy pair legally completing Black16-White20; zero postulates; P1 preserved; documentation/private package; no publication/email.",
+  "objective_complete": true,
+  "mathematical_objective_complete": true,
+  "accepted_type": "Tests.CompleteUpperRows6.Result.initial6x6 : Othello.Statements.Problem2",
+  "standard_initial_board": true,
+  "initial_turn": "black",
+  "score_convention": "raw White discs minus Black discs; no empty-square bonus",
+  "optimal_pair_is_same_pair_in_completed_play": true,
+  "terminal_discs": {
+    "black": 16,
+    "white": 20
+  },
+  "universal_history_dependent_opponents": true,
+  "actual_final_theorem_report": {
+    "path": "/mnt/data/othello-agda-desktop-artifacts-20261018/final-problem2-ephemeral6-20261019/report.json",
+    "sha256": "c4100dc31cf5747c44569d9735423e744f8d5adee709f45cd285561485cef73e"
+  },
+  "actual_checker_record": {
+    "path": "/mnt/data/othello-agda-desktop-artifacts-20261018/final-problem2-ephemeral6-20261019/records/final-problem2-check6.json",
+    "sha256": "c2c3ed4adf8f13c124fd752b335c5c96e83787337b8f2d7574e0c697bab42176"
+  },
+  "actual_checker_full_log": {
+    "path": "/mnt/data/othello-agda-desktop-artifacts-20261018/final-problem2-ephemeral6-20261019/ephemeral-agda-full.log.zst",
+    "sha256": "2cbf1db24a65df3fe43d577c3814ee358218da4e4f1f9c7d2992040ab017268e"
+  },
+  "actual_proof_reconciliation": {
+    "path": "/home/eapiova/projects/othello-agda-main/results/final-problem2-ephemeral-reconciliation6-20261019.json",
+    "sha256": "e245d4daebb523525da0e63bd4974c54ae165d4436c457203223ca3074276329"
+  },
+  "source_audit": {
+    "path": "/mnt/data/othello-agda-desktop-artifacts-20261018/final-problem2-ephemeral6-20261019/source-audit.json",
+    "sha256": "331939d1423f76daeb1d52163fc7514304b41be9e9e210404b593550a3543849"
+  },
+  "selected_source_modules": 4128,
+  "project_postulates": 0,
+  "explicit_holes": 0,
+  "proof_escapes": 0,
+  "safe_flags": [
+    "--safe",
+    "--without-K",
+    "--cubical-compatible"
+  ],
+  "compiler_binary": "/nix/store/xk75yxsl8rbkkq5g81xli5993k7h7xzh-Agda-2.9.0-bin/bin/agda",
+  "compiler_binary_sha256": "c4c5dc2617e7bcb759f0a197b679480e4296d79ea0f78de430e8268b1a02b842",
+  "P1_tag": "tpp-mark-2026-problem1",
+  "P1_tag_object": "e734d4c3e8a783a5033f7510739d680943a26015",
+  "all23P1_sources_preserved": true,
+  "original4x4_preserved": true,
+  "complete_row_batches": 667,
+  "owned_row_facts": {
+    "upper": 6530011,
+    "lower": 6873047
+  },
+  "cached_Rows_readonly_and_unchanged": 1337,
+  "Boolean_Rows_rechecked_in_final": 0,
+  "new_interfaces_only_in_private_tmpfs": true,
+  "private_tmpfs_released": true,
+  "all_archive_views_closed": true,
+  "private_package_closure": {
+    "path": "/home/eapiova/projects/othello-agda-main/results/private-problem2-package-closure6-20261019.json",
+    "sha256": "7406362ae7748ff0cc166dddceb796a889a5fef7c1a89ec01ac70b97ee9ca56f"
+  },
+  "private_package_restore_verified_files": 66,
+  "package_is_standalone": false,
+  "independent_cold_rebuild_performed": false,
+  "documentation": [
+    {
+      "path": "/home/eapiova/projects/othello-agda-main/README.md",
+      "sha256": "b0beb032c49a4645d05ac2475143e3f979e780a56ba348fec4d9e29446de2381"
+    },
+    {
+      "path": "/home/eapiova/projects/othello-agda-main/docs/verification.md",
+      "sha256": "653ea5df053db259b16b13629b338e768c1754ffe9ba40587cc3f71a85dff1cc"
+    },
+    {
+      "path": "/home/eapiova/projects/othello-agda-main/docs/private-problem2-package6.md",
+      "sha256": "13a63581d8065cebf6648779fd26985b7d48ef3bf8aa9804fe0f19eec38e4910"
+    },
+    {
+      "path": "/home/eapiova/projects/othello-agda-main/docs/claude-code-handoff6.md",
+      "sha256": "3e4b7662a002814073ccbeb0989ef69a71295a5e54fe61ef77644ae82d3b6eb3"
+    },
+    {
+      "path": "/home/eapiova/projects/othello-agda-main/AGENTS.md",
+      "sha256": "349ead911069d8652f5339b2f0504777c2aa64458bf78bcc7e5570a83c74cfb2"
+    }
+  ],
+  "AI_assistance_disclosed": true,
+  "all_requirements_satisfied": true,
+  "completion_requirements": {
+    "path": "/home/eapiova/projects/othello-agda-main/results/problem2-completion-requirements6-20261018.json",
+    "sha256": "c6784815e3ae1f0024a1b8774fb33948ed548f8af9af5d73de543eab545831eb"
+  },
+  "resource_audit": {
+    "path": "/home/eapiova/projects/othello-agda-main/results/problem2-final-resource-audit6-20261019.json",
+    "sha256": "988596c157b9197a7713e3e059010120f5d622ea90319a00112699144a2d019a"
+  },
+  "no_publication_upload_email_commit_or_push": true
+}

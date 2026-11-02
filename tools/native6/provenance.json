@@ -1,0 +1,13 @@
+{
+  "repository": "https://github.com/yaskodama/othello6x6",
+  "commit": "26914118c5b7ed6839be21cf1d6641af2f64cf6e",
+  "license": "MIT",
+  "upstream_author": "Yasuhiko Kodama",
+  "vendor_source": "vendor/solve6b.c",
+  "vendor_source_sha256": "0f72cfa5393647d8eeead814c0473f340ff7c125f590724360cf44cdef4c9f9b",
+  "vendor_license": "vendor/LICENSE",
+  "vendor_license_sha256": "e39572d397370eae2f19869e73203cde6f28979b629929a278a626d40b371282",
+  "adapted_source": "solve6.c",
+  "ai_assistance": true,
+  "trust": "untrusted oracle; no imported solver assertions in Agda"
+}

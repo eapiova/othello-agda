@@ -1,0 +1,157 @@
+"""AI-assisted safe data parser generator. Parsed claims remain untrusted."""
+from pathlib import Path
+
+ROOT=Path(__file__).resolve().parents[1]
+
+
+def generate():
+    def fin(n):return 'F.zero' if n==0 else '(F.suc '+fin(n-1)+')'
+    def nat(n):return str(n) if n<=20 else '(suc '+nat(n-1)+')'
+    source='''{-# OPTIONS --safe --without-K --cubical-compatible #-}
+-- AI-assisted strict parser. No solver claims are imported as proofs.
+module Othello.DirectedCompact6 where
+
+open import Prelude
+open import Agda.Builtin.String using (String; primStringToList)
+open import Agda.Builtin.Char using (Char; primCharToNat)
+open import Agda.Builtin.Nat using (_+_; _-_; _*_; _<_) renaming (_==_ to _≡ᵇ_)
+open import Othello.Board using (Coord; six)
+import Othello.Finite as F
+import Game.Balanced as B
+import Game.DirectedIndexed as D
+open import Othello.Order using (_≤ᵇ_)
+
+Certificate : Set
+Certificate = D.DirectedCertificate ℕ (Coord six)
+
+private
+  rankNat : ℕ → Maybe ℕ
+  rankNat n with n < 48
+  ... | true = nothing
+  ... | false with n < 58
+  ...   | true = just (n - 48)
+  ...   | false with n < 65
+  ...     | true = nothing
+  ...     | false with n < 91
+  ...       | true = just (10 + (n - 65))
+  ...       | false with n ≡ᵇ 95
+  ...         | true = just 36
+  ...         | false = nothing
+
+  readCode : ℕ → List Char → Maybe (ℕ × List Char)
+  readCode bound [] = nothing
+  readCode bound (c ∷ cs) with rankNat (primCharToNat c)
+  ... | nothing = nothing
+  ... | just n with n ≤ᵇ bound
+  ...   | false = nothing
+  ...   | true = just (n , cs)
+
+  idTail : ℕ → Bool → List Char → Maybe (ℕ × List Char)
+  idTail n seen [] = nothing
+  idTail n seen (c ∷ cs) with primCharToNat c ≡ᵇ 59
+  ... | true with seen
+  ...   | true = just (n , cs)
+  ...   | false = nothing
+  idTail n seen (c ∷ cs) | false with rankNat (primCharToNat c)
+  ... | nothing = nothing
+  ... | just d with (37 * n + d) < 20000000
+  ...   | false = nothing
+  ...   | true = idTail (37 * n + d) true cs
+
+  numberTail : ℕ → Bool → List Char → Maybe (ℕ × List Char)
+  numberTail n seen [] = nothing
+  numberTail n seen (c ∷ cs) with primCharToNat c ≡ᵇ 59
+  ... | true with seen
+  ...   | true = just (n , cs)
+  ...   | false = nothing
+  numberTail n seen (c ∷ cs) | false with rankNat (primCharToNat c)
+  ... | nothing = nothing
+  ... | just d with d < 10
+  ...   | false = nothing
+  ...   | true with (10 * n + d) ≤ᵇ 128
+  ...     | false = nothing
+  ...     | true = numberTail (10 * n + d) true cs
+
+  length : ∀ {A : Set} → List A → ℕ
+  length [] = zero
+  length (_ ∷ xs) = suc (length xs)
+
+coordinate : ℕ → Coord six
+'''
+    for i in range(36):source+=f'coordinate {nat(i)} = {fin(i//6)} , {fin(i%6)}\n'
+    source+='coordinate _ = F.zero , F.zero\n\n'
+    source+='private\n  classify : Char → ℕ\n  classify c with primCharToNat c ≡ᵇ 76\n  ... | true = 0\n'
+    for tag,code in [('K',1),('R',2),('S',3),('P',4),('C',5),('Q',6),('F',7)]:
+        source+='  ... | false with primCharToNat c ≡ᵇ '+str(ord(tag))+'\n  ... | true = '+str(code)+'\n'
+    source+='  ... | false = 8\n\n'
+    source+='''mutual
+  read : ℕ → List Char → Maybe (Certificate × List Char)
+  read zero cs = nothing
+  read (suc fuel) [] = nothing
+  read (suc fuel) (c ∷ cs) with classify c
+  ... | 0 = just (D.indexedLeaf , cs)
+  read (suc fuel) (c ∷ cs) | 1 with idTail 0 false cs
+  ... | nothing = nothing
+  ... | just (i , rest) = just (D.cite i , rest)
+  read (suc fuel) (c ∷ cs) | 2 with readCode 7 cs
+  ... | nothing = nothing
+  ... | just (tag , tail) with idTail 0 false tail
+  ...   | nothing = nothing
+  ...   | just (i , rest) = just (D.citeBy tag i , rest)
+  read (suc fuel) (c ∷ cs) | 3 with numberTail 0 false cs
+  ... | nothing = nothing
+  ... | just (n , rest) = just (D.indexedSolve n , rest)
+  read (suc fuel) (c ∷ cs) | 4 with read fuel cs
+  ... | nothing = nothing
+  ... | just (x , rest) = just (D.indexedPass x , rest)
+  read (suc fuel) (c ∷ cs) | 5 with readCode 35 cs
+  ... | nothing = nothing
+  ... | just (i , tail) with read fuel tail
+  ...   | nothing = nothing
+  ...   | just (x , rest) = just (D.indexedChoice i x , rest)
+  read (suc fuel) (c ∷ cs) | 6 with readCode 35 cs
+  ... | nothing = nothing
+  ... | just (i , tail) with read fuel tail
+  ...   | nothing = nothing
+  ...   | just (x , rest) = just (D.indexedPick (coordinate i) x , rest)
+  read (suc fuel) (c ∷ cs) | 7 with readCode 36 cs
+  ... | nothing = nothing
+  ... | just (n , tail) with reads fuel n tail
+  ...   | nothing = nothing
+  ...   | just (xs , rest) = just (D.indexedFork xs , rest)
+  read (suc fuel) (c ∷ cs) | _ = nothing
+
+  reads : ℕ → ℕ → List Char → Maybe (List Certificate × List Char)
+  reads fuel zero cs = just ([] , cs)
+  reads zero (suc n) cs = nothing
+  reads (suc fuel) (suc n) cs with read fuel cs
+  ... | nothing = nothing
+  ... | just (x , tail) with reads fuel n tail
+  ...   | nothing = nothing
+  ...   | just (xs , rest) = just (x ∷ xs , rest)
+
+private
+  readBodies : ℕ → (n : ℕ) → List Char → Maybe (B.Vec Certificate n × List Char)
+  readBodies fuel zero cs = just (B.nil , cs)
+  readBodies fuel (suc n) cs with read fuel cs
+  ... | nothing = nothing
+  ... | just (x , tail) with readBodies fuel n tail
+  ...   | nothing = nothing
+  ...   | just (xs , rest) = just (B.cons x xs , rest)
+
+  replicate : (n : ℕ) → B.Vec Certificate n
+  replicate zero = B.nil
+  replicate (suc n) = B.cons D.indexedLeaf (replicate n)
+
+decodeBodies : (n : ℕ) → String → Maybe (B.Vec Certificate n)
+decodeBodies n text with readBodies (suc (2 * length (primStringToList text))) n (primStringToList text)
+... | just (cs , []) = just cs
+... | _ = nothing
+
+bodies : (n : ℕ) → String → B.Vec Certificate n
+bodies n text = fromMaybe (replicate n) (decodeBodies n text)
+'''
+    (ROOT/'src/Othello/DirectedCompact6.agda').write_text(source)
+
+
+if __name__=='__main__':generate()
