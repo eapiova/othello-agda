@@ -1,0 +1,5 @@
+# Generated certificates remain inspectable, without enormous automatic diffs.
+six-complete/src/** linguist-generated=true -diff
+# Published evidence and generated sources must retain their exact bytes.
+six-complete/** -text
+docs/tpp2026/writeup.pdf binary

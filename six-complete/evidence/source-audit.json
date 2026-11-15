@@ -1,0 +1,44 @@
+{
+  "format": "othello-selected-problem2-source-audit-v1",
+  "source_audit_passed": true,
+  "manifest": "/mnt/data/othello-agda-desktop-artifacts-20261018/private-core-package6-20261018/manifest.json",
+  "manifest_sha256": "0f562da2f6b758e7d8e9cff86e3373d9c06effe95bbbf5ca844f4bd05294201b",
+  "selected_modules": 4128,
+  "selected_source_bytes": 837183925,
+  "provider_module_counts": {
+    "core": 91,
+    "upper-cache": 663,
+    "lower-sources": 1373,
+    "upper-sources": 1304,
+    "lower-cache": 697
+  },
+  "required_flags": [
+    "--cubical-compatible",
+    "--safe",
+    "--without-K"
+  ],
+  "forbidden_constructs_found": 0,
+  "source_postulates_found": 0,
+  "explicit_source_holes_found": 0,
+  "proof_escapes_found": 0,
+  "source_inventory_sha256": "a5bee2dbc912400835074145b1396282b98a5d96075f78cbb79fe2aee32a0766",
+  "external_modules": [
+    "Agda.Builtin.Bool",
+    "Agda.Builtin.Char",
+    "Agda.Builtin.Equality",
+    "Agda.Builtin.Int",
+    "Agda.Builtin.List",
+    "Agda.Builtin.Maybe",
+    "Agda.Builtin.Nat",
+    "Agda.Builtin.Sigma",
+    "Agda.Builtin.String",
+    "Agda.Builtin.Unit",
+    "Agda.Primitive"
+  ],
+  "external_scope": "Agda builtins from the pinned compiler",
+  "dependency_graph_closed": true,
+  "tagged_P1_files_unchanged": 23,
+  "agda_check_performed_by_this_audit": false,
+  "Problem2_checked": false,
+  "mathematical_objective_complete": false
+}

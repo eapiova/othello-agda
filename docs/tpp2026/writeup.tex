@@ -1,0 +1,84 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=20mm]{geometry}
+\usepackage{fontspec}
+\setmainfont{Latin Modern Roman}
+\setmonofont{Latin Modern Mono}[Scale=0.82]
+\usepackage[protrusion=false]{microtype}
+\usepackage{ragged2e}
+\usepackage[obeyspaces,spaces]{url}
+\usepackage{xurl}
+\usepackage[hidelinks,unicode]{hyperref}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\pagestyle{fancy}\fancyhf{}\fancyfoot[R]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\titlespacing*{\section}{0pt}{9pt plus 2pt minus 1pt}{4pt}
+\titlespacing*{\subsection}{0pt}{7pt plus 2pt minus 1pt}{3pt}
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection.}{0.5em}{}
+\newcommand{\code}[1]{\nolinkurl{#1}}
+\newcommand{\hashvalue}[1]{{\small\ttfamily #1}}
+\hypersetup{pdftitle={Certified Othello results in safe Agda},pdfauthor={Riccardo Borsetto},pdfsubject={TPP-mark 2026}}
+\begin{document}
+\RaggedRight
+\begin{center}
+{\LARGE\bfseries Certified Othello results in safe Agda}\par
+\vspace{3mm}
+TPP-mark 2026 · Problems 1 and 2, with partial work on Problem 3\\
+Riccardo Borsetto · 15 November 2026
+\end{center}
+\section{Results and scope}
+
+This submission supplies accepted safe Agda results for the standard initial positions of 4×4 and 6×6 Othello. In 4×4, White wins and the raw White-minus-Black score has optimal value +8. In 6×6, that value is +4, and the same optimal forcing strategies have a completed legal play ending with Black 16 and White 20. The 8×8 draw theorem is \textbf{not proved}. Its included conditional development is supplementary work, not a solution to Problem 3.
+
+Sources are available in the \href{https://github.com/eapiova/othello-agda}{repository}, including the \href{https://github.com/eapiova/othello-agda/tree/main/six-complete}{complete selected 6×6 source tree}; submission artifacts and supporting documentation are available in the \href{https://github.com/eapiova/othello-agda/releases/tag/tpp2026-submission-20261115}{submission release}.
+
+\subsection{Rule model and guarantees}
+
+Boards are finite vectors of cells. The standard centre is W B / B W, with Black to move. A legal placement occupies an empty square and brackets one or more opponent discs between the placed disc and a friendly disc along at least one of the eight straight directions. All bracketed discs are flipped. Legal successors are enumerated in row-major order. If the mover has no placement and the opponent does, the sole successor is a pass; if neither player can place, the position is terminal. Empty squares are not awarded to either player.
+
+A strategy receives the chronological history and current position, and recommends a natural-number successor index. An out-of-range recommendation is normalized to the first legal successor. Thus every recommendation function denotes legal play at a nonterminal position, and every legal successor choice is expressible.
+
+A guarantee provides a forcing strategy and, against each opposing strategy, a completed legal play reaching a terminal position satisfying the goal. This includes existence of the completed play; it is not merely an implication about hypothetical terminal outcomes. A value $v$ packages a White guarantee of White score at least Black score plus $v$, and a Black guarantee of White score at most Black score plus $v$.
+
+The challenge's “White wins 20–16” is represented by \code{Problem2}. The 6×6 statement additionally retains a completed play of those \textbf{same} two forcing strategies, with the two terminal counts 16 and 20. A value of +4 alone would not specify separate counts. The counts sum to 36, so this witnessed final board has no empty cells. The accepted statement source is byte-identical to the statement at the preserved Problem 1 tag, predating completion of Problem 2. Exact declarations and source links are in \href{formal-source.html}{the formal-source companion}. Keep this PDF next to \code{formal-source.html} to use its relative links; if a PDF viewer blocks local links, open the HTML directly.
+
+\section{Problem 1: the 4×4 result}
+
+The accepted exports are \code{Othello.Proof4.problem1} and \code{Othello.Proof4.value4}. The former establishes White's win guarantee; the latter supplies both score guarantees at +8. See \href{formal-source.html\#p1-problem1}{the Problem 1 section of the formal-source companion}.
+
+An untrusted exact bitboard search emits two finite certificates. A separate scalar implementation checks the small-board results diagnostically. The certificate language distinguishes terminal leaves, an owner choice of one legal successor, an opponent fork over every legal successor in order, and forced passes. The Agda evaluator recomputes legal moves and scores, rather than trusting supplied board transitions or terminal scores.
+
+\section{Proof construction and checking}
+
+\subsection{Certificate soundness}
+
+The generic soundness argument is by structural recursion on the certificate. At a leaf, the checker establishes terminality and the required goal. At an owner-choice node, the strategy takes the checked legal edge and uses the induction hypothesis for its child. At an opponent fork, every normalized legal recommendation selects a covered child, so the corresponding induction hypothesis applies. At a forced pass, the unique checked successor supplies the recursive continuation. Each step extends the completed play with the actual normalized successor index, so subsequent strategy calls see the correct history.
+
+The concrete 4×4 acceptance equalities are proved by reflexivity through Agda evaluation. The White certificate has 399 nodes and the Black certificate 337. Applying checked soundness yields the two guarantees. Strengthening White's lower score bound from +8 to strictly positive gives the requested win. These are certificate sizes, not a count of the entire game graph. The independent diagnostic line ends Black 3–White 11 with two empty squares; it uses the raw score convention specified above.
+
+The rule development also relates Boolean capture scanning to inductive bracketing and establishes legal-move completeness. A separate termination proof uses twice the number of empty cells plus a bit recording lack of a current placement. A placement decreases the empty count; a forced pass leaves that count unchanged but moves to a player who can place, reducing the bit. Thus legal successors decrease the measure, providing completed plays independently of certificate soundness.
+
+\subsection{Problem 2: the 6×6 result}
+
+The accepted endpoint is \code{Tests.CompleteUpperRows6.Result.initial6x6 : Problem2}. A separate typed wrapper, \code{Tests.FinalProblem2Check6.initial6x6}, was checked in the final invocation. The type has no caller-supplied game-value premise. See \href{formal-source.html\#p2-initial6x6}{the Problem 2 section of the formal-source companion}.
+
+The larger proof uses generated state maps and checked row facts rather than reducing one enormous transparent tree at the final endpoint. Lower-bound rows establish White guarantees at +4; upper-bound rows establish Black guarantees at +4. Checked assembly combines these facts into complete maps. Compatibility proofs connect the selected state representation and resolver to the positions consumed by the prefix proof. The generated maps, native search and code emission remain untrusted inputs.
+
+The final assembly supplies both complete \code{CheckedParts} records to \code{Joint.complete}. Internally, this constructs lower and upper proven maps and supplies the compatible guarantees for the first 21 positions of a fixed legal line. A separately proved suffix supplies the later positions. The checked path-splicing construction joins these positionwise guarantees along that legal line: the selected continuation preserves each player's bound while the recorded line fixes a terminal 16–20 outcome. On the chosen edge, each patched strategy continues with the child guarantee. If the opponent deviates, it falls back to the old positionwise guarantee; thus no opponent branch is discarded. Induction backwards along the finite line supplies two guarantees whose mutual play follows the line to its terminal board. The resulting term contains the value guarantees and the completed play of that same forcing pair. A different pair of strategies with the same score would not suffice for the submitted type.
+
+All 667 scheduled row batches were accepted across retained, reconciled stages. The final checker reused their previously checked interfaces and actually checked both complete \code{AllParts} records, the \code{Result} module and the typed endpoint. Individual row acceptance, a native solver answer or an unchecked assembly proposal is not being substituted for that final check.
+
+\section{Problem 3: incomplete 8×8 work}
+
+The requested draw statement is \code{Problem3 = HasValue eight 0}, the value-zero guarantee for the standard initial 8×8 position. This has no closed accepted inhabitant in the submitted work. The supplied historical reduced integration wrapper is an accepted \textbf{conditional} function: it requires a Black upper-bound guarantee at a particular descendant position, 35 sibling boundary guarantees, and the outer, lower and other-upper hypothesis families. These inputs are not all supplied by this submission. See \href{formal-source.html\#p3-conditional}{the conditional Problem 3 source in the formal-source companion}.
+
+Later local fragments were checked in the continuing research, including scoped shared-proof pilots. Neither those fragments nor individually accepted branches establish their complete ancestor or the initial draw theorem. The included conditional wrapper is illustrative, is not claimed to be the latest research endpoint, and imports dependencies not shipped here. It is not a standalone-checkable 8×8 package. Research was paused to prepare this submission; no percentage of completion or global remaining-obligation count is asserted.
+
+\section{AI assistance}
+
+Codex assisted with proof terms, implementation, untrusted certificates, tests, generators, controllers, audits, resource handling and documentation. A user-provided Claude plan informed the design. Later research and submission preparation used Hermes Agent, multi-model assistance and scoped delegated reviews. Observed metadata identifies GPT-6.1 Sol and an Opus reference model; unobserved historical turns are not assigned identities. AI and native outputs remain untrusted: accepted theorem claims rest on safe Agda checking and the stated rule model.
+
+\end{document}

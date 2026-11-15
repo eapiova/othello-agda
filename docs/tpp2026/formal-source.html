@@ -1,0 +1,712 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Formal source companion</title><style>body{max-width:1000px;margin:32px auto;padding:0 20px;font:16px/1.5 sans-serif}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f3f4f6;padding:16px}h2{margin-top:40px}</style><h1>Formal source companion</h1><p>Verbatim source excerpts. This companion is not generated Agda HTML and is not a new typecheck. Anchor names identify documentary sections, not compiler identifiers.</p><h2 id="statements">Shared theorem statements (problem2/core-source.zip: src/Othello/Statements.agda)</h2><pre>{-# OPTIONS --safe --without-K --cubical-compatible #-}
+module Othello.Statements where
+
+open import Prelude
+open import Agda.Builtin.Nat using (_+_)
+open import Game.Core
+open import Othello.Board
+open import Othello.Rules using (game)
+open import Othello.Order
+
+-- These inequalities characterize a nonnegative raw disc difference exactly,
+-- without saturating natural subtraction or awarding unoccupied squares.
+lowerGoal : ∀ {size} → ℕ → State size → Bool
+lowerGoal v s = (discs black s + v) ≤ᵇ discs white s
+
+upperGoal : ∀ {size} → ℕ → State size → Bool
+upperGoal v s = discs white s ≤ᵇ (discs black s + v)
+
+winGoal : ∀ {size} → State size → Bool
+winGoal s = suc (discs black s) ≤ᵇ discs white s
+
+record HasValue (size : Size) (v : ℕ) : Set where
+  field
+    lower : WhiteGuarantees (game size) (lowerGoal v) (initial size)
+    upper : BlackGuarantees (game size) (upperGoal v) (initial size)
+open HasValue public
+
+Problem1 : Set
+Problem1 = WhiteGuarantees (game four) winGoal (initial four)
+
+-- A value of +4 alone does not fix the two separate terminal disc counts.
+-- This statement retains an optimal strategy pair and its 16–20 outcome.
+Problem2 : Set
+Problem2 = Σ (HasValue six 4) (λ optimal →
+  Σ (State six) (λ t →
+    CompletedPlay (game six) white (forcing (lower optimal))
+      (forcing (upper optimal)) (initial six) t ×
+    ((discs black t ≡ 16) × (discs white t ≡ 20))))
+
+Problem3 : Set
+Problem3 = HasValue eight 0
+
+-- Problems 2 and 3 are types only; this module asserts no inhabitants.
+
+lower-eight-wins :
+  WhiteGuarantees (game four) (lowerGoal 8) (initial four) → Problem1
+lower-eight-wins lowerBound = record
+  { forcing = forcing lowerBound
+  ; responds = λ opposing → strengthen opposing (responds lowerBound opposing)
+  }
+  where
+  strengthen : (opposing : Strategy (State four)) → Σ (State four) (λ t →
+    CompletedPlay (game four) white (forcing lowerBound) opposing (initial four) t ×
+    (lowerGoal 8 t ≡ true)) →
+    Σ (State four) (λ t →
+    CompletedPlay (game four) white (forcing lowerBound) opposing (initial four) t ×
+    (winGoal t ≡ true))
+  strengthen opposing (t , (play , accepted)) = t , (play ,
+    ≤ᵇ-complete (≤-trans (one≤plus-eight (discs black t)) (≤ᵇ-sound accepted)))
+</pre><h2 id="guarantees">Strategy and guarantee definitions (same ZIP: src/Game/Core.agda)</h2><pre>{-# OPTIONS --safe --without-K --cubical-compatible #-}
+module Game.Core where
+
+open import Prelude public
+open import Game.Player public
+
+record Game (S : Set) : Set where
+  field
+    turn : S → Player
+    next : S → List S
+    forcedPass : S → Bool
+open Game public
+
+-- Histories are chronological lists of actual successor indices. Strategies
+-- may depend on both the entire history and the current position.
+Strategy : Set → Set
+Strategy S = List ℕ → S → ℕ
+
+shift : ∀ {S} → ℕ → Strategy S → Strategy S
+shift i σ h s = σ (i ∷ h) s
+
+lookup : ∀ {A : Set} → List A → ℕ → Maybe A
+lookup [] i = nothing
+lookup (x ∷ xs) zero = just x
+lookup (x ∷ xs) (suc i) = lookup xs i
+
+record Selection (S : Set) : Set where
+  constructor selection
+  field
+    index : ℕ
+    selected : S
+open Selection public
+
+-- The fallback is the head of the original list, even when a large index
+-- has traversed past several elements.
+resolved : ∀ {S} → S → ℕ → Maybe S → Selection S
+resolved x i (just y) = selection i y
+resolved x i nothing = selection zero x
+
+resolve : ∀ {S} (x : S) (xs : List S) → ℕ → Selection S
+resolve x xs i = resolved x i (lookup (x ∷ xs) i)
+
+resolve-inRange : ∀ {S} {x y : S} {xs i} → lookup (x ∷ xs) i ≡ just y →
+                  resolve x xs i ≡ selection i y
+resolve-inRange {x = x} {i = i} e = cong (resolved x i) e
+
+resolve-index : ∀ {S} {x y : S} {xs i} → lookup (x ∷ xs) i ≡ just y →
+                index (resolve x xs i) ≡ i
+resolve-index {x = x} {xs = xs} {i = i} e = cong index (resolve-inRange {x = x} {xs = xs} {i = i} e)
+
+resolve-selected : ∀ {S} {x y : S} {xs i} → lookup (x ∷ xs) i ≡ just y →
+                   selected (resolve x xs i) ≡ y
+resolve-selected {x = x} {xs = xs} {i = i} e = cong selected (resolve-inRange {x = x} {xs = xs} {i = i} e)
+
+resolve-valid : ∀ {S} (x : S) (xs : List S) (i : ℕ) →
+  lookup (x ∷ xs) (index (resolve x xs i)) ≡ just (selected (resolve x xs i))
+resolve-valid x xs i with lookup (x ∷ xs) i in e
+... | just y = e
+... | nothing = refl
+
+decision : ∀ {S} → Game S → Player → Strategy S → Strategy S → S → ℕ
+chooseDecision : Bool → ℕ → ℕ → ℕ
+chooseDecision true own opposing = own
+chooseDecision false own opposing = opposing
+
+decision g p σ τ s = chooseDecision (samePlayer (turn g s) p) (σ [] s) (τ [] s)
+
+-- At each step, strategies are restricted to the observed prefix. This is
+-- equivalent to passing the growing chronological history explicitly.
+data CompletedPlay {S : Set} (g : Game S) (p : Player)
+                   (σ τ : Strategy S) (s : S) : S → Set where
+  done : next g s ≡ [] → CompletedPlay g p σ τ s s
+  step : ∀ {x xs t} (legal : next g s ≡ x ∷ xs) →
+    let move = resolve x xs (decision g p σ τ s) in
+    CompletedPlay g p (shift (index move) σ) (shift (index move) τ)
+                     (selected move) t →
+    CompletedPlay g p σ τ s t
+
+terminal : ∀ {S} {g : Game S} {p σ τ s t} →
+           CompletedPlay g p σ τ s t → next g t ≡ []
+terminal (done e) = e
+terminal (step e play) = terminal play
+
+history : ∀ {S} {g : Game S} {p σ τ s t} →
+          CompletedPlay g p σ τ s t → List ℕ
+history (done e) = []
+history {g = g} {p} {σ} {τ} {s} (step {x} {xs} e play) =
+  index (resolve x xs (decision g p σ τ s)) ∷ history play
+
+-- Two completed plays against the same strategies have the same endpoint.
+play-deterministic : ∀ {S} {g : Game S} {p σ τ s t u} →
+  CompletedPlay g p σ τ s t → CompletedPlay g p σ τ s u → t ≡ u
+play-deterministic (done e) (done f) = refl
+play-deterministic (done e) (step f q) with trans (sym e) f
+... | ()
+play-deterministic (step e q) (done f) with trans (sym e) f
+... | ()
+play-deterministic (step e q) (step f r) with trans (sym e) f
+... | refl = play-deterministic q r
+
+record Guarantees {S : Set} (g : Game S) (p : Player)
+                  (goal : S → Bool) (s : S) : Set where
+  constructor guarantee
+  field
+    forcing : Strategy S
+    responds : (opposing : Strategy S) →
+      Σ S (λ t → CompletedPlay g p forcing opposing s t × (goal t ≡ true))
+open Guarantees public
+
+WhiteGuarantees : ∀ {S} → Game S → (S → Bool) → S → Set
+WhiteGuarantees g = Guarantees g white
+
+BlackGuarantees : ∀ {S} → Game S → (S → Bool) → S → Set
+BlackGuarantees g = Guarantees g black
+
+-- A convenient form of step for a strategy index certified to be in range.
+stepAt : ∀ {S} {g : Game S} {p σ τ s x xs i y t} →
+  next g s ≡ x ∷ xs → decision g p σ τ s ≡ i →
+  lookup (x ∷ xs) i ≡ just y →
+  CompletedPlay g p (shift i σ) (shift i τ) y t →
+  CompletedPlay g p σ τ s t
+stepAt {g = g} {p} {σ} {τ} {x = x} {xs} {t = t} en ed el q =
+  step en (subst (λ m → CompletedPlay g p (shift (index m) σ) (shift (index m) τ)
+                                       (selected m) t)
+                 (sym (trans (cong (resolve x xs) ed) (resolve-inRange el))) q)
+
+-- A compulsory singleton successor is followed regardless of either
+-- strategy&#x27;s natural-number recommendation.
+stepOnly : ∀ {S} {g : Game S} {p σ τ s x t} →
+  next g s ≡ x ∷ [] →
+  CompletedPlay g p (shift zero σ) (shift zero τ) x t →
+  CompletedPlay g p σ τ s t
+stepOnly {g = g} {p} {σ} {τ} {s} {x} {t} en q =
+  step en (subst (λ m → CompletedPlay g p (shift (index m) σ) (shift (index m) τ)
+                                       (selected m) t)
+                 (sym (only (decision g p σ τ s))) q)
+  where
+  only : (i : ℕ) → resolve x [] i ≡ selection zero x
+  only zero = refl
+  only (suc i) = refl
+
+decision-own : ∀ {S} {g : Game S} {p σ τ s} →
+  samePlayer (turn g s) p ≡ true → decision g p σ τ s ≡ σ [] s
+decision-own {g = g} {p} {σ} {τ} {s} e = cong (λ b → chooseDecision b (σ [] s) (τ [] s)) e
+
+decision-opponent : ∀ {S} {g : Game S} {p σ τ s} →
+  samePlayer (turn g s) p ≡ false → decision g p σ τ s ≡ τ [] s
+decision-opponent {g = g} {p} {σ} {τ} {s} e = cong (λ b → chooseDecision b (σ [] s) (τ [] s)) e
+
+-- The analogous form accepts an arbitrary recommendation and records its
+-- normalized actual index, including the fallback case.
+stepFrom : ∀ {S} {g : Game S} {p σ τ s x xs i t} →
+  next g s ≡ x ∷ xs → decision g p σ τ s ≡ i →
+  let move = resolve x xs i in
+  CompletedPlay g p (shift (index move) σ) (shift (index move) τ) (selected move) t →
+  CompletedPlay g p σ τ s t
+stepFrom {g = g} {p} {σ} {τ} {x = x} {xs} {t = t} en ed q =
+  step en (subst (λ m → CompletedPlay g p (shift (index m) σ) (shift (index m) τ)
+                                       (selected m) t)
+                 (sym (cong (resolve x xs) ed)) q)
+
+-- Exchanging the forcing and opposing roles does not change actual moves.
+decision-swap : ∀ {S} (g : Game S) (p : Player) (σ τ : Strategy S) (s : S) →
+  decision g p σ τ s ≡ decision g (other p) τ σ s
+decision-swap g p σ τ s with turn g s | p
+... | black | black = refl
+... | black | white = refl
+... | white | black = refl
+... | white | white = refl
+
+swapPlay : ∀ {S} {g : Game S} {p σ τ s t} →
+  CompletedPlay g p σ τ s t → CompletedPlay g (other p) τ σ s t
+swapPlay (done e) = done e
+swapPlay {g = g} {p} {σ} {τ} {s} {t} (step {x} {xs} en q) =
+  step en (subst (λ m → CompletedPlay g (other p) (shift (index m) τ) (shift (index m) σ)
+                                                (selected m) t)
+                 (cong (resolve x xs) (decision-swap g p σ τ s)) (swapPlay q))
+</pre><h2 id="p1-problem1">Problem 1 (nested problem1 archive: src/Othello/Proof4.agda)</h2><pre>{-# OPTIONS --safe --without-K --cubical-compatible #-}
+module Othello.Proof4 where
+
+open import Prelude
+open import Game.Core
+open import Game.Certificate using (check)
+open import Game.Soundness using (checkSound)
+open import Othello.Board
+open import Othello.Rules using (game)
+open import Othello.Statements
+open import Othello.Generated4
+
+-- Each refl invokes Agda&#x27;s evaluator on the supplied data and executable rules.
+-- Neither equality is assumed from the external searcher&#x27;s result.
+lowerAccepted :
+  check (game four) white (lowerGoal 8) (initial four) lowerCertificate ≡ true
+lowerAccepted = refl
+
+upperAccepted :
+  check (game four) black (upperGoal 8) (initial four) upperCertificate ≡ true
+upperAccepted = refl
+
+lower4 : WhiteGuarantees (game four) (lowerGoal 8) (initial four)
+lower4 = checkSound (game four) white (lowerGoal 8) (initial four)
+                   lowerCertificate lowerAccepted
+
+upper4 : BlackGuarantees (game four) (upperGoal 8) (initial four)
+upper4 = checkSound (game four) black (upperGoal 8) (initial four)
+                   upperCertificate upperAccepted
+
+value4 : HasValue four 8
+value4 = record { lower = lower4 ; upper = upper4 }
+
+problem1 : Problem1
+problem1 = lower-eight-wins lower4
+</pre><h2 id="p2-initial6x6">Problem 2 (problem2/checked-source/src/Tests/CompleteUpperRows6/Result.agda)</h2><pre>{-# OPTIONS --safe --without-K --cubical-compatible -WnoUnsupportedIndexedMatch -WnoRewritesNothing #-}
+-- AI-assisted untrusted certificate source; safe Agda must check this module.
+module Tests.CompleteUpperRows6.Result where
+open import Othello.Statements using (Problem2)
+import Tests.TextLowerPacked6.Joint as Joint
+import Tests.CompleteUpperRows6.AllParts as Upper
+import Tests.CompleteLowerRows6.AllParts as Lower
+abstract
+  initial6x6 : Problem2
+  initial6x6 = Joint.complete Lower.checked Upper.checked
+-- This source asserts no success receipt: all imported rows must first be checked.
+</pre><h2 id="p2-wrapper">Typed final wrapper (problem2/checked-source/src/Tests/FinalProblem2Check6.agda)</h2><pre>{-# OPTIONS --safe --without-K --cubical-compatible #-}
+-- AI-assisted final safe checker wrapper.
+module Tests.FinalProblem2Check6 where
+open import Othello.Statements using (Problem2)
+import Tests.CompleteUpperRows6.Result as Result
+
+initial6x6 : Problem2
+initial6x6 = Result.initial6x6
+</pre><h2 id="p3-conditional">Conditional Problem 3 wrapper (problem3-partial/Integration.agda; dependencies not included)</h2><pre>{-# OPTIONS --safe --without-K --cubical-compatible #-}
+-- AI-assisted. Conditional reduced-cut integration only, NOT a closed Problem3.
+module DesktopReduced1.Integration where
+
+open import Opening.Base
+open import Othello.Board using (State; eight)
+open import Othello.Statements using (Problem3)
+open import Game.Symmetry using (Proven)
+import Proof8.Invariant.F114Frame1.Data as D
+import Proof8.PNCut.Composition as C
+import Proof8.PNCut.L3700.Data as Actual
+import Proof8.DFPN.L0F4.Integration as LowerF4
+import Proof8.PNCutIntegration.Hypotheses as Global
+import Proof8.Invariant.F146.Integration as Previous
+
+data Boundary : Set where
+  B3518 B6327 B6404 B7550 B7643 B7679 B8099 B8110 B8125 B8126 B8127 B8128 B8129 B8137 B8147 B8171 B8195 B8200 B8251 B8265 B8269 B8271 B8317 B8368 B8404 B8514 B8777 B8843 B9509 B9801 B10225 B10299 B11528 B12522 B12582 : Boundary
+
+boundary : Boundary → State eight
+boundary B3518 = D.s3518
+boundary B6327 = D.s6327
+boundary B6404 = D.s6404
+boundary B7550 = D.s7550
+boundary B7643 = D.s7643
+boundary B7679 = D.s7679
+boundary B8099 = D.s8099
+boundary B8110 = D.s8110
+boundary B8125 = D.s8125
+boundary B8126 = D.s8126
+boundary B8127 = D.s8127
+boundary B8128 = D.s8128
+boundary B8129 = D.s8129
+boundary B8137 = D.s8137
+boundary B8147 = D.s8147
+boundary B8171 = D.s8171
+boundary B8195 = D.s8195
+boundary B8200 = D.s8200
+boundary B8251 = D.s8251
+boundary B8265 = D.s8265
+boundary B8269 = D.s8269
+boundary B8271 = D.s8271
+boundary B8317 = D.s8317
+boundary B8368 = D.s8368
+boundary B8404 = D.s8404
+boundary B8514 = D.s8514
+boundary B8777 = D.s8777
+boundary B8843 = D.s8843
+boundary B9509 = D.s9509
+boundary B9801 = D.s9801
+boundary B10225 = D.s10225
+boundary B10299 = D.s10299
+boundary B11528 = D.s11528
+boundary B12522 = D.s12522
+boundary B12582 = D.s12582
+
+BoundaryHypotheses : Set
+BoundaryHypotheses = (k : Boundary) → Proven (game eight) black (upperGoal 0) (boundary k)
+
+abstract
+  prove8148 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s8148
+  prove8148 r h = C.fork (game eight) black (upperGoal 0) {s = D.s8148} refl refl (C.cons r (C.cons (h B8125) (C.cons (h B8126) (C.cons (h B8127) (C.cons (h B8128) (C.cons (h B8129) (C.cons (h B8137) (C.cons (h B8147) (C.nil)))))))))
+
+  prove8149 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s8149
+  prove8149 r h = C.choice (game eight) black (upperGoal 0) 4 {s = D.s8149} {t = D.s8148} refl refl refl (prove8148 r h)
+
+  prove8196 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s8196
+  prove8196 r h = C.fork (game eight) black (upperGoal 0) {s = D.s8196} refl refl (C.cons (h B8110) (C.cons (prove8149 r h) (C.cons (h B8171) (C.cons (h B8195) (C.nil)))))
+
+  prove8197 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s8197
+  prove8197 r h = C.choice (game eight) black (upperGoal 0) 4 {s = D.s8197} {t = D.s8196} refl refl refl (prove8196 r h)
+
+  prove8252 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s8252
+  prove8252 r h = C.fork (game eight) black (upperGoal 0) {s = D.s8252} refl refl (C.cons (prove8197 r h) (C.cons (h B8200) (C.cons (h B8251) (C.nil))))
+
+  prove8253 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s8253
+  prove8253 r h = C.choice (game eight) black (upperGoal 0) 11 {s = D.s8253} {t = D.s8252} refl refl refl (prove8252 r h)
+
+  prove8266 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s8266
+  prove8266 r h = C.fork (game eight) black (upperGoal 0) {s = D.s8266} refl refl (C.cons (h B8099) (C.cons (prove8253 r h) (C.cons (h B8265) (C.nil))))
+
+  prove8267 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s8267
+  prove8267 r h = C.choice (game eight) black (upperGoal 0) 0 {s = D.s8267} {t = D.s8266} refl refl refl (prove8266 r h)
+
+  prove8272 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s8272
+  prove8272 r h = C.fork (game eight) black (upperGoal 0) {s = D.s8272} refl refl (C.cons (h B7679) (C.cons (prove8267 r h) (C.cons (h B8269) (C.cons (h B8271) (C.nil)))))
+
+  prove8273 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s8273
+  prove8273 r h = C.choice (game eight) black (upperGoal 0) 4 {s = D.s8273} {t = D.s8272} refl refl refl (prove8272 r h)
+
+  prove8515 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s8515
+  prove8515 r h = C.fork (game eight) black (upperGoal 0) {s = D.s8515} refl refl (C.cons (h B7643) (C.cons (prove8273 r h) (C.cons (h B8317) (C.cons (h B8368) (C.cons (h B8404) (C.cons (h B8514) (C.nil)))))))
+
+  prove8516 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s8516
+  prove8516 r h = C.choice (game eight) black (upperGoal 0) 0 {s = D.s8516} {t = D.s8515} refl refl refl (prove8515 r h)
+
+  prove9510 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s9510
+  prove9510 r h = C.fork (game eight) black (upperGoal 0) {s = D.s9510} refl refl (C.cons (h B6404) (C.cons (h B7550) (C.cons (prove8516 r h) (C.cons (h B8777) (C.cons (h B8843) (C.cons (h B9509) (C.nil)))))))
+
+  prove9511 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s9511
+  prove9511 r h = C.choice (game eight) black (upperGoal 0) 9 {s = D.s9511} {t = D.s9510} refl refl refl (prove9510 r h)
+
+  prove10300 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s10300
+  prove10300 r h = C.fork (game eight) black (upperGoal 0) {s = D.s10300} refl refl (C.cons (h B6327) (C.cons (prove9511 r h) (C.cons (h B9801) (C.cons (h B10225) (C.cons (h B10299) (C.nil))))))
+
+  prove10301 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s10301
+  prove10301 r h = C.choice (game eight) black (upperGoal 0) 9 {s = D.s10301} {t = D.s10300} refl refl refl (prove10300 r h)
+
+  prove12523 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s12523
+  prove12523 r h = C.fork (game eight) black (upperGoal 0) {s = D.s12523} refl refl (C.cons (h B3518) (C.cons (prove10301 r h) (C.cons (h B11528) (C.cons (h B12522) (C.nil)))))
+
+  prove12524 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s12524
+  prove12524 r h = C.choice (game eight) black (upperGoal 0) 6 {s = D.s12524} {t = D.s12523} refl refl refl (prove12523 r h)
+
+  prove12583 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses → Proven (game eight) black (upperGoal 0) D.s12583
+  prove12583 r h = C.fork (game eight) black (upperGoal 0) {s = D.s12583} refl refl (C.cons (prove12524 r h) (C.cons (h B12582) (C.nil)))
+
+root-is-F114 : D.s12583 ≡ Actual.position Actual.F114
+root-is-F114 = refl
+
+repairedF114 : Proven (game eight) black (upperGoal 0) D.s8124 → BoundaryHypotheses →
+  Proven (game eight) black (upperGoal 0) (Actual.position Actual.F114)
+repairedF114 r h = subst (Proven (game eight) black (upperGoal 0)) root-is-F114 (prove12583 r h)
+
+RemainingUpper : Actual.Frontier → Set
+RemainingUpper Actual.F114 = ⊤
+RemainingUpper k = Previous.RemainingUpper k
+
+RemainingUpperHypotheses : Set
+RemainingUpperHypotheses = (k : Actual.Frontier) → RemainingUpper k
+
+toPrevious : RemainingUpperHypotheses →
+  Proven (game eight) black (upperGoal 0) (Actual.position Actual.F114) →
+  Previous.RemainingUpperHypotheses
+toPrevious h f Actual.F0 = tt
+toPrevious h f Actual.F1 = h Actual.F1
+toPrevious h f Actual.F2 = h Actual.F2
+toPrevious h f Actual.F3 = h Actual.F3
+toPrevious h f Actual.F4 = h Actual.F4
+toPrevious h f Actual.F5 = h Actual.F5
+toPrevious h f Actual.F6 = h Actual.F6
+toPrevious h f Actual.F7 = h Actual.F7
+toPrevious h f Actual.F8 = h Actual.F8
+toPrevious h f Actual.F9 = h Actual.F9
+toPrevious h f Actual.F10 = h Actual.F10
+toPrevious h f Actual.F11 = h Actual.F11
+toPrevious h f Actual.F12 = h Actual.F12
+toPrevious h f Actual.F13 = h Actual.F13
+toPrevious h f Actual.F14 = h Actual.F14
+toPrevious h f Actual.F15 = h Actual.F15
+toPrevious h f Actual.F16 = h Actual.F16
+toPrevious h f Actual.F17 = h Actual.F17
+toPrevious h f Actual.F18 = h Actual.F18
+toPrevious h f Actual.F19 = h Actual.F19
+toPrevious h f Actual.F20 = h Actual.F20
+toPrevious h f Actual.F21 = h Actual.F21
+toPrevious h f Actual.F22 = h Actual.F22
+toPrevious h f Actual.F23 = h Actual.F23
+toPrevious h f Actual.F24 = h Actual.F24
+toPrevious h f Actual.F25 = h Actual.F25
+toPrevious h f Actual.F26 = h Actual.F26
+toPrevious h f Actual.F27 = h Actual.F27
+toPrevious h f Actual.F28 = h Actual.F28
+toPrevious h f Actual.F29 = h Actual.F29
+toPrevious h f Actual.F30 = h Actual.F30
+toPrevious h f Actual.F31 = h Actual.F31
+toPrevious h f Actual.F32 = h Actual.F32
+toPrevious h f Actual.F33 = h Actual.F33
+toPrevious h f Actual.F34 = h Actual.F34
+toPrevious h f Actual.F35 = h Actual.F35
+toPrevious h f Actual.F36 = h Actual.F36
+toPrevious h f Actual.F37 = h Actual.F37
+toPrevious h f Actual.F38 = h Actual.F38
+toPrevious h f Actual.F39 = h Actual.F39
+toPrevious h f Actual.F40 = h Actual.F40
+toPrevious h f Actual.F41 = h Actual.F41
+toPrevious h f Actual.F42 = h Actual.F42
+toPrevious h f Actual.F43 = h Actual.F43
+toPrevious h f Actual.F44 = h Actual.F44
+toPrevious h f Actual.F45 = h Actual.F45
+toPrevious h f Actual.F46 = h Actual.F46
+toPrevious h f Actual.F47 = h Actual.F47
+toPrevious h f Actual.F48 = h Actual.F48
+toPrevious h f Actual.F49 = h Actual.F49
+toPrevious h f Actual.F50 = h Actual.F50
+toPrevious h f Actual.F51 = h Actual.F51
+toPrevious h f Actual.F52 = h Actual.F52
+toPrevious h f Actual.F53 = h Actual.F53
+toPrevious h f Actual.F54 = h Actual.F54
+toPrevious h f Actual.F55 = h Actual.F55
+toPrevious h f Actual.F56 = h Actual.F56
+toPrevious h f Actual.F57 = h Actual.F57
+toPrevious h f Actual.F58 = h Actual.F58
+toPrevious h f Actual.F59 = h Actual.F59
+toPrevious h f Actual.F60 = h Actual.F60
+toPrevious h f Actual.F61 = h Actual.F61
+toPrevious h f Actual.F62 = h Actual.F62
+toPrevious h f Actual.F63 = h Actual.F63
+toPrevious h f Actual.F64 = h Actual.F64
+toPrevious h f Actual.F65 = h Actual.F65
+toPrevious h f Actual.F66 = h Actual.F66
+toPrevious h f Actual.F67 = h Actual.F67
+toPrevious h f Actual.F68 = h Actual.F68
+toPrevious h f Actual.F69 = h Actual.F69
+toPrevious h f Actual.F70 = h Actual.F70
+toPrevious h f Actual.F71 = h Actual.F71
+toPrevious h f Actual.F72 = h Actual.F72
+toPrevious h f Actual.F73 = h Actual.F73
+toPrevious h f Actual.F74 = h Actual.F74
+toPrevious h f Actual.F75 = h Actual.F75
+toPrevious h f Actual.F76 = h Actual.F76
+toPrevious h f Actual.F77 = h Actual.F77
+toPrevious h f Actual.F78 = h Actual.F78
+toPrevious h f Actual.F79 = h Actual.F79
+toPrevious h f Actual.F80 = h Actual.F80
+toPrevious h f Actual.F81 = h Actual.F81
+toPrevious h f Actual.F82 = h Actual.F82
+toPrevious h f Actual.F83 = h Actual.F83
+toPrevious h f Actual.F84 = h Actual.F84
+toPrevious h f Actual.F85 = h Actual.F85
+toPrevious h f Actual.F86 = h Actual.F86
+toPrevious h f Actual.F87 = h Actual.F87
+toPrevious h f Actual.F88 = h Actual.F88
+toPrevious h f Actual.F89 = h Actual.F89
+toPrevious h f Actual.F90 = h Actual.F90
+toPrevious h f Actual.F91 = h Actual.F91
+toPrevious h f Actual.F92 = h Actual.F92
+toPrevious h f Actual.F93 = h Actual.F93
+toPrevious h f Actual.F94 = h Actual.F94
+toPrevious h f Actual.F95 = h Actual.F95
+toPrevious h f Actual.F96 = h Actual.F96
+toPrevious h f Actual.F97 = h Actual.F97
+toPrevious h f Actual.F98 = h Actual.F98
+toPrevious h f Actual.F99 = h Actual.F99
+toPrevious h f Actual.F100 = h Actual.F100
+toPrevious h f Actual.F101 = h Actual.F101
+toPrevious h f Actual.F102 = h Actual.F102
+toPrevious h f Actual.F103 = h Actual.F103
+toPrevious h f Actual.F104 = h Actual.F104
+toPrevious h f Actual.F105 = h Actual.F105
+toPrevious h f Actual.F106 = h Actual.F106
+toPrevious h f Actual.F107 = h Actual.F107
+toPrevious h f Actual.F108 = h Actual.F108
+toPrevious h f Actual.F109 = h Actual.F109
+toPrevious h f Actual.F110 = h Actual.F110
+toPrevious h f Actual.F111 = h Actual.F111
+toPrevious h f Actual.F112 = h Actual.F112
+toPrevious h f Actual.F113 = h Actual.F113
+toPrevious h f Actual.F114 = f
+toPrevious h f Actual.F115 = h Actual.F115
+toPrevious h f Actual.F116 = h Actual.F116
+toPrevious h f Actual.F117 = h Actual.F117
+toPrevious h f Actual.F118 = h Actual.F118
+toPrevious h f Actual.F119 = h Actual.F119
+toPrevious h f Actual.F120 = h Actual.F120
+toPrevious h f Actual.F121 = h Actual.F121
+toPrevious h f Actual.F122 = h Actual.F122
+toPrevious h f Actual.F123 = h Actual.F123
+toPrevious h f Actual.F124 = h Actual.F124
+toPrevious h f Actual.F125 = h Actual.F125
+toPrevious h f Actual.F126 = h Actual.F126
+toPrevious h f Actual.F127 = h Actual.F127
+toPrevious h f Actual.F128 = h Actual.F128
+toPrevious h f Actual.F129 = h Actual.F129
+toPrevious h f Actual.F130 = h Actual.F130
+toPrevious h f Actual.F131 = h Actual.F131
+toPrevious h f Actual.F132 = h Actual.F132
+toPrevious h f Actual.F133 = h Actual.F133
+toPrevious h f Actual.F134 = h Actual.F134
+toPrevious h f Actual.F135 = h Actual.F135
+toPrevious h f Actual.F136 = h Actual.F136
+toPrevious h f Actual.F137 = h Actual.F137
+toPrevious h f Actual.F138 = h Actual.F138
+toPrevious h f Actual.F139 = h Actual.F139
+toPrevious h f Actual.F140 = h Actual.F140
+toPrevious h f Actual.F141 = h Actual.F141
+toPrevious h f Actual.F142 = h Actual.F142
+toPrevious h f Actual.F143 = h Actual.F143
+toPrevious h f Actual.F144 = h Actual.F144
+toPrevious h f Actual.F145 = h Actual.F145
+toPrevious h f Actual.F146 = tt
+toPrevious h f Actual.F147 = h Actual.F147
+toPrevious h f Actual.F148 = h Actual.F148
+toPrevious h f Actual.F149 = h Actual.F149
+toPrevious h f Actual.F150 = h Actual.F150
+toPrevious h f Actual.F151 = h Actual.F151
+toPrevious h f Actual.F152 = h Actual.F152
+toPrevious h f Actual.F153 = h Actual.F153
+toPrevious h f Actual.F154 = h Actual.F154
+toPrevious h f Actual.F155 = h Actual.F155
+toPrevious h f Actual.F156 = h Actual.F156
+toPrevious h f Actual.F157 = h Actual.F157
+toPrevious h f Actual.F158 = h Actual.F158
+toPrevious h f Actual.F159 = h Actual.F159
+toPrevious h f Actual.F160 = h Actual.F160
+toPrevious h f Actual.F161 = h Actual.F161
+toPrevious h f Actual.F162 = h Actual.F162
+toPrevious h f Actual.F163 = h Actual.F163
+toPrevious h f Actual.F164 = h Actual.F164
+toPrevious h f Actual.F165 = h Actual.F165
+toPrevious h f Actual.F166 = h Actual.F166
+toPrevious h f Actual.F167 = h Actual.F167
+toPrevious h f Actual.F168 = h Actual.F168
+toPrevious h f Actual.F169 = h Actual.F169
+toPrevious h f Actual.F170 = h Actual.F170
+toPrevious h f Actual.F171 = h Actual.F171
+toPrevious h f Actual.F172 = h Actual.F172
+toPrevious h f Actual.F173 = h Actual.F173
+toPrevious h f Actual.F174 = h Actual.F174
+toPrevious h f Actual.F175 = h Actual.F175
+toPrevious h f Actual.F176 = h Actual.F176
+toPrevious h f Actual.F177 = h Actual.F177
+toPrevious h f Actual.F178 = h Actual.F178
+toPrevious h f Actual.F179 = h Actual.F179
+toPrevious h f Actual.F180 = h Actual.F180
+toPrevious h f Actual.F181 = h Actual.F181
+toPrevious h f Actual.F182 = h Actual.F182
+toPrevious h f Actual.F183 = h Actual.F183
+toPrevious h f Actual.F184 = h Actual.F184
+toPrevious h f Actual.F185 = h Actual.F185
+toPrevious h f Actual.F186 = h Actual.F186
+toPrevious h f Actual.F187 = h Actual.F187
+toPrevious h f Actual.F188 = h Actual.F188
+toPrevious h f Actual.F189 = h Actual.F189
+toPrevious h f Actual.F190 = h Actual.F190
+toPrevious h f Actual.F191 = h Actual.F191
+toPrevious h f Actual.F192 = h Actual.F192
+toPrevious h f Actual.F193 = h Actual.F193
+toPrevious h f Actual.F194 = h Actual.F194
+toPrevious h f Actual.F195 = h Actual.F195
+toPrevious h f Actual.F196 = h Actual.F196
+toPrevious h f Actual.F197 = h Actual.F197
+toPrevious h f Actual.F198 = h Actual.F198
+toPrevious h f Actual.F199 = h Actual.F199
+toPrevious h f Actual.F200 = h Actual.F200
+toPrevious h f Actual.F201 = h Actual.F201
+toPrevious h f Actual.F202 = h Actual.F202
+toPrevious h f Actual.F203 = h Actual.F203
+toPrevious h f Actual.F204 = h Actual.F204
+toPrevious h f Actual.F205 = h Actual.F205
+toPrevious h f Actual.F206 = h Actual.F206
+toPrevious h f Actual.F207 = h Actual.F207
+toPrevious h f Actual.F208 = h Actual.F208
+toPrevious h f Actual.F209 = h Actual.F209
+toPrevious h f Actual.F210 = h Actual.F210
+toPrevious h f Actual.F211 = h Actual.F211
+toPrevious h f Actual.F212 = h Actual.F212
+toPrevious h f Actual.F213 = h Actual.F213
+toPrevious h f Actual.F214 = h Actual.F214
+toPrevious h f Actual.F215 = h Actual.F215
+toPrevious h f Actual.F216 = h Actual.F216
+toPrevious h f Actual.F217 = h Actual.F217
+toPrevious h f Actual.F218 = h Actual.F218
+toPrevious h f Actual.F219 = h Actual.F219
+toPrevious h f Actual.F220 = h Actual.F220
+toPrevious h f Actual.F221 = h Actual.F221
+toPrevious h f Actual.F222 = h Actual.F222
+toPrevious h f Actual.F223 = h Actual.F223
+toPrevious h f Actual.F224 = h Actual.F224
+toPrevious h f Actual.F225 = h Actual.F225
+toPrevious h f Actual.F226 = h Actual.F226
+toPrevious h f Actual.F227 = h Actual.F227
+toPrevious h f Actual.F228 = h Actual.F228
+toPrevious h f Actual.F229 = h Actual.F229
+toPrevious h f Actual.F230 = h Actual.F230
+toPrevious h f Actual.F231 = h Actual.F231
+toPrevious h f Actual.F232 = h Actual.F232
+toPrevious h f Actual.F233 = h Actual.F233
+toPrevious h f Actual.F234 = h Actual.F234
+toPrevious h f Actual.F235 = h Actual.F235
+toPrevious h f Actual.F236 = h Actual.F236
+toPrevious h f Actual.F237 = h Actual.F237
+toPrevious h f Actual.F238 = h Actual.F238
+toPrevious h f Actual.F239 = h Actual.F239
+toPrevious h f Actual.F240 = h Actual.F240
+toPrevious h f Actual.F241 = h Actual.F241
+toPrevious h f Actual.F242 = h Actual.F242
+toPrevious h f Actual.F243 = h Actual.F243
+toPrevious h f Actual.F244 = h Actual.F244
+toPrevious h f Actual.F245 = h Actual.F245
+toPrevious h f Actual.F246 = h Actual.F246
+toPrevious h f Actual.F247 = h Actual.F247
+toPrevious h f Actual.F248 = h Actual.F248
+toPrevious h f Actual.F249 = h Actual.F249
+toPrevious h f Actual.F250 = h Actual.F250
+toPrevious h f Actual.F251 = h Actual.F251
+toPrevious h f Actual.F252 = h Actual.F252
+toPrevious h f Actual.F253 = h Actual.F253
+toPrevious h f Actual.F254 = h Actual.F254
+toPrevious h f Actual.F255 = h Actual.F255
+toPrevious h f Actual.F256 = h Actual.F256
+toPrevious h f Actual.F257 = h Actual.F257
+toPrevious h f Actual.F258 = h Actual.F258
+toPrevious h f Actual.F259 = h Actual.F259
+toPrevious h f Actual.F260 = h Actual.F260
+toPrevious h f Actual.F261 = h Actual.F261
+toPrevious h f Actual.F262 = h Actual.F262
+toPrevious h f Actual.F263 = h Actual.F263
+toPrevious h f Actual.F264 = h Actual.F264
+toPrevious h f Actual.F265 = h Actual.F265
+toPrevious h f Actual.F266 = h Actual.F266
+toPrevious h f Actual.F267 = h Actual.F267
+toPrevious h f Actual.F268 = h Actual.F268
+toPrevious h f Actual.F269 = h Actual.F269
+toPrevious h f Actual.F270 = h Actual.F270
+toPrevious h f Actual.F271 = h Actual.F271
+toPrevious h f Actual.F272 = h Actual.F272
+toPrevious h f Actual.F273 = h Actual.F273
+toPrevious h f Actual.F274 = h Actual.F274
+toPrevious h f Actual.F275 = h Actual.F275
+toPrevious h f Actual.F276 = h Actual.F276
+toPrevious h f Actual.F277 = h Actual.F277
+toPrevious h f Actual.F278 = h Actual.F278
+toPrevious h f Actual.F279 = h Actual.F279
+toPrevious h f Actual.F280 = h Actual.F280
+toPrevious h f Actual.F281 = h Actual.F281
+toPrevious h f Actual.F282 = h Actual.F282
+
+problem3FromRepair : Proven (game eight) black (upperGoal 0) D.s8124 →
+  BoundaryHypotheses → Global.RemainingHypotheses →
+  LowerF4.RemainingLowerHypotheses → RemainingUpperHypotheses → Problem3
+problem3FromRepair r b h l u = Previous.problem3FromF4F0F146 h l (toPrevious u (repairedF114 r b))
+</pre></html>

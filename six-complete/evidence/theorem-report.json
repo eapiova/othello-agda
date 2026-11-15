@@ -1,0 +1,74 @@
+{
+  "format": "othello-final-problem2-check6-report-v1",
+  "finished_utc": "2026-10-19T12:36:24.872876+00:00",
+  "accepted": true,
+  "failure": null,
+  "child_record": "/mnt/data/othello-agda-desktop-artifacts-20261018/final-problem2-ephemeral6-20261019/records/final-problem2-check6.json",
+  "child_record_sha256": "c2c3ed4adf8f13c124fd752b335c5c96e83787337b8f2d7574e0c697bab42176",
+  "source_audit": "/mnt/data/othello-agda-desktop-artifacts-20261018/final-problem2-ephemeral6-20261019/source-audit.json",
+  "view_cleanup": [
+    {
+      "view": "/mnt/data/othello-agda-desktop-artifacts-20261018/final-problem2-ephemeral6-20261019/views/lower-cache",
+      "unmounted": true,
+      "exit_code": 0
+    },
+    {
+      "view": "/mnt/data/othello-agda-desktop-artifacts-20261018/final-problem2-ephemeral6-20261019/views/upper-cache",
+      "unmounted": true,
+      "exit_code": 0
+    },
+    {
+      "view": "/mnt/data/othello-agda-desktop-artifacts-20261018/final-problem2-ephemeral6-20261019/views/lower-rows",
+      "unmounted": true,
+      "exit_code": 0
+    },
+    {
+      "view": "/mnt/data/othello-agda-desktop-artifacts-20261018/final-problem2-ephemeral6-20261019/proof/src/Tests/CompleteLowerRows6",
+      "unmounted": true,
+      "exit_code": 0
+    },
+    {
+      "view": "/mnt/data/othello-agda-desktop-artifacts-20261018/final-problem2-ephemeral6-20261019/views/upper-rows",
+      "unmounted": true,
+      "exit_code": 0
+    },
+    {
+      "view": "/mnt/data/othello-agda-desktop-artifacts-20261018/final-problem2-ephemeral6-20261019/proof/src/Tests/CompleteUpperRows6",
+      "unmounted": true,
+      "exit_code": 0
+    }
+  ],
+  "final_storage": {
+    "checked_utc": "2026-10-19T12:36:24.866195+00:00",
+    "allocated_study_bytes": 12875100160,
+    "own_output_bytes": 1677312,
+    "own_output_cap_bytes": 4194304,
+    "private_packaging_remaining_allowance_bytes": 1416704,
+    "full_projection_bytes": 12879033856,
+    "hard_retained_cap_bytes": 12884901888,
+    "root_free_bytes": 86076022784,
+    "data_free_bytes": 350446546944,
+    "stop_reserve_bytes": 0,
+    "census_path_count": 99,
+    "virtual_readonly_fuse_bytes_excluded_via_du_x": true
+  },
+  "Problem2_checked": true,
+  "both_actual_AllParts_checked": true,
+  "Result_initial6x6_checked": true,
+  "same_optimal_pair_black16_white20": true,
+  "white_minus_black_raw_score": 4,
+  "tagged_P1_preserved": true,
+  "source_postulates": 0,
+  "no_Boolean_Rows_rechecked": true,
+  "no_interfaces_written": false,
+  "no_persistent_interfaces_written": true,
+  "only_new_namespace_private_interfaces_written": true,
+  "private_tmpfs_released_after_checker": true,
+  "ephemeral_cache": "/mnt/data/othello-agda-desktop-artifacts-20261018/final-problem2-ephemeral6-20261019/ephemeral-cache.json",
+  "ephemeral_cache_sha256": "ff520d03cfe23c413395031bff14a7827c3cc3f44199785c70dbe7a8afb93b7e",
+  "private_source_package_independently_rebuilt": false,
+  "private_source_package_referenced_not_duplicated": true,
+  "mathematical_objective_complete": false,
+  "remaining_project_work": "parent proof-boundary review, documentation and private package closure",
+  "manual_ledger_finish_required_from_outer_record": true
+}
